@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mulls hälsoresa</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    min-height: 100vh;
+    padding: 24px 16px;
+    color: #fff;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    background: linear-gradient(90deg, #f9ca24, #f0932b, #eb4d4b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .sync-status {
+    text-align: center;
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.38);
+    margin-bottom: 10px;
+    min-height: 16px;
+    transition: color 0.3s;
+  }
+  .sync-status.syncing { color: #f9ca24aa; }
+  .sync-status.ok      { color: #6bcb77aa; }
+  .sync-status.err     { color: #ff4d4daa; }
+
+  .weekly-total {
+    text-align: center;
+    font-size: 2.4rem;
+    font-weight: 800;
+    margin-bottom: 24px;
+    transition: color 0.4s;
+  }
+  .weekly-total.red    { color: #ff4d4d; text-shadow: 0 0 12px #ff4d4d88; }
+  .weekly-total.yellow { color: #f9ca24; text-shadow: 0 0 12px #f9ca2488; }
+  .weekly-total.green  { color: #6bcb77; text-shadow: 0 0 14px #6bcb7788; }
+
+  .week-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+
+  .day-card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    backdrop-filter: blur(6px);
+  }
+
+  .day-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    width: 42px;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #ccd6f6;
+  }
+
+  .checks {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+  }
+
+  .check-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+  }
+
+  .check-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    border: 2px solid rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.07);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    transition: all 0.2s ease;
+    color: transparent;
+    user-select: none;
+  }
+
+  .check-btn:hover {
+    border-color: rgba(255,255,255,0.5);
+    background: rgba(255,255,255,0.14);
+  }
+
+  .check-btn.checked {
+    background: #27ae60;
+    border-color: #2ecc71;
+    color: white;
+    box-shadow: 0 0 10px #2ecc7166;
+  }
+
+  .check-label {
+    font-size: 0.6rem;
+    text-align: center;
+    color: rgba(255,255,255,0.55);
+    line-height: 1.2;
+    max-width: 50px;
+  }
+
+  .day-score {
+    font-weight: 800;
+    font-size: 1rem;
+    width: 36px;
+    text-align: right;
+    flex-shrink: 0;
+    transition: color 0.3s;
+  }
+  .day-score.s0 { color: #ff4d4d; }
+  .day-score.s1 { color: #f9ca24; }
+  .day-score.s2 { color: #f0932b; }
+  .day-score.s3 { color: #6bcb77; }
+
+  .reset-btn {
+    display: block;
+    margin: 28px auto 0;
+    padding: 10px 28px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 30px;
+    color: rgba(255,255,255,0.6);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .reset-btn:hover {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+  }
+
+  .loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: #1a1a2e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: rgba(255,255,255,0.5);
+    z-index: 99;
+    transition: opacity 0.5s;
+  }
+  .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">⏳ Laddar Mulls hälsoresa…</div>
+
+<h1>Mulls hälsoresa 🌟</h1>
+<div class="sync-status" id="syncStatus">Ansluter…</div>
+<div class="weekly-total" id="weeklyTotal">0/21</div>
+<div class="week-grid" id="weekGrid"></div>
+<button class="reset-btn" onclick="resetAll()">↺ Återställ veckan</button>
+
+<script>
+  const DB_URL = 'https://mullveckan-default-rtdb.europe-west1.firebasedatabase.app/vecka.json';
+  const DAYS   = ['Måndag','Tisdag','Onsdag','Torsdag','Fredag','Lördag','Söndag'];
+  const LABELS = ['>10k steg','Sockerfri dag','Stolträning'];
+
+  let state  = DAYS.map(() => [false, false, false]);
+  let saving = false;
+
+  function timeNow() {
+    return new Date().toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function setStatus(msg, cls) {
+    const el = document.getElementById('syncStatus');
+    el.textContent = msg;
+    el.className = 'sync-status ' + (cls || '');
+  }
+
+  async function loadFromDb() {
+    const res = await fetch(DB_URL);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (Array.isArray(data) && data.length === 7) return data;
+    return null;
+  }
+
+  async function saveToDb(data) {
+    const res = await fetch(DB_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return res.ok;
+  }
+
+  function render() {
+    const grid = document.getElementById('weekGrid');
+    grid.innerHTML = '';
+    let total = 0;
+
+    DAYS.forEach((day, di) => {
+      const checked = state[di].filter(Boolean).length;
+      total += checked;
+
+      const card = document.createElement('div');
+      card.className = 'day-card';
+
+      const nameEl = document.createElement('div');
+      nameEl.className = 'day-name';
+      nameEl.textContent = day.slice(0, 3);
+      card.appendChild(nameEl);
+
+      const checksEl = document.createElement('div');
+      checksEl.className = 'checks';
+
+      LABELS.forEach((label, ci) => {
+        const item = document.createElement('div');
+        item.className = 'check-item';
+
+        const btn = document.createElement('button');
+        btn.className = 'check-btn' + (state[di][ci] ? ' checked' : '');
+        btn.innerHTML = state[di][ci] ? '✓' : '';
+        btn.title = label;
+        btn.addEventListener('click', () => toggle(di, ci));
+
+        const lbl = document.createElement('div');
+        lbl.className = 'check-label';
+        lbl.textContent = label;
+
+        item.appendChild(btn);
+        item.appendChild(lbl);
+        checksEl.appendChild(item);
+      });
+
+      card.appendChild(checksEl);
+
+      const scoreEl = document.createElement('div');
+      const sc = checked === 0 ? 's0' : checked === 1 ? 's1' : checked === 2 ? 's2' : 's3';
+      scoreEl.className = 'day-score ' + sc;
+      scoreEl.textContent = checked + '/3';
+      card.appendChild(scoreEl);
+
+      grid.appendChild(card);
+    });
+
+    const wtEl = document.getElementById('weeklyTotal');
+    wtEl.textContent = total + '/21';
+    wtEl.className = 'weekly-total ' + (total >= 15 ? 'green' : total >= 10 ? 'yellow' : 'red');
+  }
+
+  async function toggle(di, ci) {
+    if (saving) return;
+    saving = true;
+    state[di][ci] = !state[di][ci];
+    render();
+    setStatus('Sparar…', 'syncing');
+    try {
+      const ok = await saveToDb(state);
+      setStatus(ok ? '✓ Synkad ' + timeNow() : '⚠ Kunde inte spara', ok ? 'ok' : 'err');
+    } catch(e) {
+      setStatus('⚠ Fel: ' + e.message, 'err');
+    }
+    saving = false;
+  }
+
+  async function resetAll() {
+    state = DAYS.map(() => [false, false, false]);
+    render();
+    setStatus('Sparar…', 'syncing');
+    try {
+      const ok = await saveToDb(state);
+      setStatus(ok ? '✓ Återställd ' + timeNow() : '⚠ Kunde inte spara', ok ? 'ok' : 'err');
+    } catch(e) {
+      setStatus('⚠ Fel: ' + e.message, 'err');
+    }
+  }
+
+  // Poll every 10 seconds for updates
+  async function poll() {
+    if (saving) return;
+    try {
+      const remote = await loadFromDb();
+      if (remote) {
+        const remoteStr = JSON.stringify(remote);
+        if (remoteStr !== JSON.stringify(state)) {
+          state = remote;
+          render();
+          setStatus('↻ Uppdaterad ' + timeNow(), 'ok');
+        }
+      }
+    } catch(e) {}
+  }
+
+  async function init() {
+    try {
+      const remote = await loadFromDb();
+      if (remote) {
+        state = remote;
+        setStatus('✓ Ansluten', 'ok');
+      } else {
+        setStatus('Ingen data ännu – bocka i din första dag!', '');
+      }
+    } catch(e) {
+      setStatus('⚠ Kunde inte ansluta: ' + e.message, 'err');
+    }
+    render();
+    document.getElementById('loadingOverlay').classList.add('hidden');
+    setInterval(poll, 10000);
+  }
+
+  init();
+</script>
+</body>
+</html>
