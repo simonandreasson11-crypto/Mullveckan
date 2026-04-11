@@ -20,13 +20,58 @@
     font-size: 2rem;
     font-weight: 700;
     letter-spacing: 1px;
-    margin-bottom: 6px;
+    margin-bottom: 14px;
     background: linear-gradient(90deg, #f9ca24, #f0932b, #eb4d4b);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
+  /* Week selector */
+  .week-selector {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+
+  .week-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 2px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.07);
+    color: rgba(255,255,255,0.6);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .week-btn:hover {
+    border-color: rgba(255,255,255,0.4);
+    color: #fff;
+  }
+
+  .week-btn.active {
+    background: rgba(255,255,255,0.18);
+    border-color: rgba(255,255,255,0.6);
+    color: #fff;
+  }
+
+  .week-btn .week-mini-score {
+    display: block;
+    font-size: 0.62rem;
+    font-weight: 700;
+    margin-top: 1px;
+  }
+
+  .week-btn .week-mini-score.red    { color: #ff4d4d; }
+  .week-btn .week-mini-score.yellow { color: #f9ca24; }
+  .week-btn .week-mini-score.green  { color: #6bcb77; }
+
+  /* Sync status */
   .sync-status {
     text-align: center;
     font-size: 0.72rem;
@@ -179,18 +224,32 @@
 <div class="loading-overlay" id="loadingOverlay">⏳ Laddar Mulls hälsoresa…</div>
 
 <h1>Mulls hälsoresa 🌟</h1>
+
+<div class="week-selector" id="weekSelector"></div>
+
 <div class="sync-status" id="syncStatus">Ansluter…</div>
 <div class="weekly-total" id="weeklyTotal">0/21</div>
 <div class="week-grid" id="weekGrid"></div>
 <button class="reset-btn" onclick="resetAll()">↺ Återställ veckan</button>
 
 <script>
-  const DB_URL = 'https://mullveckan-default-rtdb.europe-west1.firebasedatabase.app/vecka.json';
-  const DAYS   = ['Måndag','Tisdag','Onsdag','Torsdag','Fredag','Lördag','Söndag'];
-  const LABELS = ['>10k steg','Sockerfri dag','Pilates'];
+  const BASE_URL  = 'https://mullveckan-default-rtdb.europe-west1.firebasedatabase.app';
+  const DAYS      = ['Måndag','Tisdag','Onsdag','Torsdag','Fredag','Lördag','Söndag'];
+  const LABELS    = ['>10k steg','Sockerfri dag','Pilates'];
+  const NUM_WEEKS = 5;
 
-  let state  = DAYS.map(() => [false, false, false]);
+  let currentWeek = 1;
+  // allWeeks[w] = state for week w (1-indexed), loaded lazily
+  let allWeeks = {};
   let saving = false;
+
+  function dbUrl(w) {
+    return `${BASE_URL}/vecka${w}.json`;
+  }
+
+  function emptyState() {
+    return DAYS.map(() => [false, false, false]);
+  }
 
   function timeNow() {
     return new Date().toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
@@ -202,16 +261,24 @@
     el.className = 'sync-status ' + (cls || '');
   }
 
-  async function loadFromDb() {
-    const res = await fetch(DB_URL);
+  function weekTotal(state) {
+    return state.reduce((sum, day) => sum + day.filter(Boolean).length, 0);
+  }
+
+  function scoreClass(total) {
+    return total >= 15 ? 'green' : total >= 10 ? 'yellow' : 'red';
+  }
+
+  async function loadWeek(w) {
+    const res = await fetch(dbUrl(w));
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     if (Array.isArray(data) && data.length === 7) return data;
     return null;
   }
 
-  async function saveToDb(data) {
-    const res = await fetch(DB_URL, {
+  async function saveWeek(w, data) {
+    const res = await fetch(dbUrl(w), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -219,8 +286,26 @@
     return res.ok;
   }
 
-  function render() {
-    const grid = document.getElementById('weekGrid');
+  function renderWeekSelector() {
+    const sel = document.getElementById('weekSelector');
+    sel.innerHTML = '';
+    for (let w = 1; w <= NUM_WEEKS; w++) {
+      const btn = document.createElement('button');
+      btn.className = 'week-btn' + (w === currentWeek ? ' active' : '');
+
+      const state = allWeeks[w] || emptyState();
+      const total = weekTotal(state);
+      const cls   = scoreClass(total);
+
+      btn.innerHTML = `Vecka ${w}<span class="week-mini-score ${cls}">${total}/21</span>`;
+      btn.addEventListener('click', () => switchWeek(w));
+      sel.appendChild(btn);
+    }
+  }
+
+  function renderGrid() {
+    const state = allWeeks[currentWeek] || emptyState();
+    const grid  = document.getElementById('weekGrid');
     grid.innerHTML = '';
     let total = 0;
 
@@ -271,17 +356,38 @@
 
     const wtEl = document.getElementById('weeklyTotal');
     wtEl.textContent = total + '/21';
-    wtEl.className = 'weekly-total ' + (total >= 15 ? 'green' : total >= 10 ? 'yellow' : 'red');
+    wtEl.className = 'weekly-total ' + scoreClass(total);
+  }
+
+  function render() {
+    renderWeekSelector();
+    renderGrid();
+  }
+
+  async function switchWeek(w) {
+    currentWeek = w;
+    setStatus('Laddar vecka ' + w + '…', 'syncing');
+    if (!allWeeks[w]) {
+      try {
+        const data = await loadWeek(w);
+        allWeeks[w] = data || emptyState();
+      } catch(e) {
+        allWeeks[w] = emptyState();
+      }
+    }
+    setStatus('✓ Vecka ' + w, 'ok');
+    render();
   }
 
   async function toggle(di, ci) {
     if (saving) return;
     saving = true;
-    state[di][ci] = !state[di][ci];
+    if (!allWeeks[currentWeek]) allWeeks[currentWeek] = emptyState();
+    allWeeks[currentWeek][di][ci] = !allWeeks[currentWeek][di][ci];
     render();
     setStatus('Sparar…', 'syncing');
     try {
-      const ok = await saveToDb(state);
+      const ok = await saveWeek(currentWeek, allWeeks[currentWeek]);
       setStatus(ok ? '✓ Synkad ' + timeNow() : '⚠ Kunde inte spara', ok ? 'ok' : 'err');
     } catch(e) {
       setStatus('⚠ Fel: ' + e.message, 'err');
@@ -290,26 +396,26 @@
   }
 
   async function resetAll() {
-    state = DAYS.map(() => [false, false, false]);
+    allWeeks[currentWeek] = emptyState();
     render();
     setStatus('Sparar…', 'syncing');
     try {
-      const ok = await saveToDb(state);
+      const ok = await saveWeek(currentWeek, allWeeks[currentWeek]);
       setStatus(ok ? '✓ Återställd ' + timeNow() : '⚠ Kunde inte spara', ok ? 'ok' : 'err');
     } catch(e) {
       setStatus('⚠ Fel: ' + e.message, 'err');
     }
   }
 
-  // Poll every 10 seconds for updates
+  // Poll every 10s for updates on current week
   async function poll() {
     if (saving) return;
     try {
-      const remote = await loadFromDb();
+      const remote = await loadWeek(currentWeek);
       if (remote) {
         const remoteStr = JSON.stringify(remote);
-        if (remoteStr !== JSON.stringify(state)) {
-          state = remote;
+        if (remoteStr !== JSON.stringify(allWeeks[currentWeek])) {
+          allWeeks[currentWeek] = remote;
           render();
           setStatus('↻ Uppdaterad ' + timeNow(), 'ok');
         }
@@ -318,17 +424,17 @@
   }
 
   async function init() {
-    try {
-      const remote = await loadFromDb();
-      if (remote) {
-        state = remote;
-        setStatus('✓ Ansluten', 'ok');
-      } else {
-        setStatus('Ingen data ännu – bocka i din första dag!', '');
-      }
-    } catch(e) {
-      setStatus('⚠ Kunde inte ansluta: ' + e.message, 'err');
+    // Load all weeks in parallel so mini-scores show correctly
+    const promises = [];
+    for (let w = 1; w <= NUM_WEEKS; w++) {
+      promises.push(loadWeek(w).then(data => {
+        allWeeks[w] = data || emptyState();
+      }).catch(() => {
+        allWeeks[w] = emptyState();
+      }));
     }
+    await Promise.all(promises);
+    setStatus('✓ Ansluten', 'ok');
     render();
     document.getElementById('loadingOverlay').classList.add('hidden');
     setInterval(poll, 10000);
