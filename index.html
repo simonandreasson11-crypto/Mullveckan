@@ -411,7 +411,10 @@
 <script>
   const BASE_URL    = 'https://mullveckan-default-rtdb.europe-west1.firebasedatabase.app';
   const DAYS        = ['Måndag','Tisdag','Onsdag','Torsdag','Fredag','Lördag','Söndag'];
-  const LABELS      = ['>10k steg','Sockerfri dag','Pilates'];
+  function labelsForWeek(w) {
+    const stepLabel = w >= 3 ? '>12k steg' : '>10k steg';
+    return [stepLabel, 'Sockerfri dag', 'Pilates'];
+  }
   const NUM_WEEKS   = 5;
   const WEIGHT_KEY  = 'vikt';
 
@@ -495,7 +498,8 @@
       const checksEl = document.createElement('div');
       checksEl.className = 'checks';
 
-      LABELS.forEach((label, ci) => {
+      const labels = labelsForWeek(currentWeek);
+      labels.forEach((label, ci) => {
         const item = document.createElement('div');
         item.className = 'check-item';
         const btn = document.createElement('button');
