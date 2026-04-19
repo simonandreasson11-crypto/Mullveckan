@@ -34,6 +34,39 @@
     background-clip: text;
   }
 
+  /* Main tabs */
+  .main-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 18px;
+    max-width: 520px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .main-tab {
+    flex: 1;
+    padding: 10px 16px;
+    border-radius: 12px;
+    border: 2px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.07);
+    color: rgba(255,255,255,0.6);
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .main-tab:hover { color: #fff; border-color: rgba(255,255,255,0.4); }
+  .main-tab.active {
+    background: linear-gradient(135deg, #f0932b 0%, #eb4d4b 100%);
+    border-color: rgba(255,255,255,0.6);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(240,147,43,0.35);
+  }
+
   .week-selector {
     display: flex;
     justify-content: center;
@@ -185,6 +218,122 @@
   }
   .reset-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
 
+  /* Weight tab */
+  .weight-container {
+    max-width: 520px;
+    margin: 0 auto;
+  }
+
+  .weight-input-card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 18px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .weight-input {
+    flex: 1;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 2px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+
+  .weight-input:focus { border-color: #f0932b; }
+  .weight-input::placeholder { color: rgba(255,255,255,0.35); }
+
+  .weight-add-btn {
+    padding: 12px 22px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg, #f0932b 0%, #eb4d4b 100%);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .weight-add-btn:active { transform: scale(0.96); }
+
+  .chart-card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 18px;
+  }
+
+  .chart-title {
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+
+  .chart-svg {
+    width: 100%;
+    height: 240px;
+    display: block;
+  }
+
+  .chart-empty {
+    text-align: center;
+    color: rgba(255,255,255,0.4);
+    padding: 40px 20px;
+    font-size: 0.9rem;
+  }
+
+  .entries-list {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    padding: 6px;
+    margin-bottom: 40px;
+  }
+
+  .entry-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    font-size: 0.9rem;
+  }
+  .entry-row:last-child { border-bottom: none; }
+
+  .entry-date {
+    color: rgba(255,255,255,0.65);
+  }
+
+  .entry-weight {
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .entry-delete {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.35);
+    cursor: pointer;
+    padding: 4px 8px;
+    margin-left: 8px;
+    font-size: 1rem;
+    transition: color 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .entry-delete:hover { color: #ff4d4d; }
+
   .loading-overlay {
     position: fixed;
     inset: 0;
@@ -199,7 +348,6 @@
   }
   .loading-overlay.hidden { opacity: 0; pointer-events: none; }
 
-  /* Install banner */
   .install-banner {
     display: none;
     max-width: 520px;
@@ -214,6 +362,8 @@
     cursor: pointer;
   }
   .install-banner.visible { display: block; }
+
+  .hidden-section { display: none; }
 </style>
 </head>
 <body>
@@ -226,23 +376,53 @@
   📲 Tryck här för att installera appen på din hemskärm!
 </div>
 
-<div class="week-selector" id="weekSelector"></div>
+<div class="main-tabs">
+  <button class="main-tab active" id="tabWeek" onclick="showTab('week')">📅 Veckan</button>
+  <button class="main-tab" id="tabWeight" onclick="showTab('weight')">⚖️ Resan</button>
+</div>
+
 <div class="sync-status" id="syncStatus">Ansluter…</div>
-<div class="weekly-total" id="weeklyTotal">0/21</div>
-<div class="week-grid" id="weekGrid"></div>
-<button class="reset-btn" onclick="resetAll()">↺ Återställ veckan</button>
+
+<!-- WEEK TAB -->
+<div id="weekSection">
+  <div class="week-selector" id="weekSelector"></div>
+  <div class="weekly-total" id="weeklyTotal">0/21</div>
+  <div class="week-grid" id="weekGrid"></div>
+  <button class="reset-btn" onclick="resetAll()">↺ Återställ veckan</button>
+</div>
+
+<!-- WEIGHT TAB -->
+<div id="weightSection" class="hidden-section">
+  <div class="weight-container">
+    <div class="weight-input-card">
+      <input type="number" step="0.1" min="0" max="500" class="weight-input" id="weightInput" placeholder="Vikt i kg, t.ex. 68.5">
+      <button class="weight-add-btn" onclick="addWeight()">+ Lägg till</button>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Viktutveckling över tid</div>
+      <div id="chartContainer"></div>
+    </div>
+
+    <div class="entries-list" id="entriesList"></div>
+  </div>
+</div>
 
 <script>
-  const BASE_URL  = 'https://mullveckan-default-rtdb.europe-west1.firebasedatabase.app';
-  const DAYS      = ['Måndag','Tisdag','Onsdag','Torsdag','Fredag','Lördag','Söndag'];
-  const LABELS    = ['>10k steg','Sockerfri dag','Pilates'];
-  const NUM_WEEKS = 5;
+  const BASE_URL    = 'https://mullveckan-default-rtdb.europe-west1.firebasedatabase.app';
+  const DAYS        = ['Måndag','Tisdag','Onsdag','Torsdag','Fredag','Lördag','Söndag'];
+  const LABELS      = ['>10k steg','Sockerfri dag','Pilates'];
+  const NUM_WEEKS   = 5;
+  const WEIGHT_KEY  = 'vikt';
 
-  let currentWeek = 1;
-  let allWeeks    = {};
-  let saving      = false;
+  let currentWeek  = 1;
+  let allWeeks     = {};
+  let weightEntries = []; // [{ts: number, kg: number}, ...]
+  let saving = false;
+  let currentTab = 'week';
 
   function dbUrl(w) { return `${BASE_URL}/vecka${w}.json`; }
+  function weightUrl() { return `${BASE_URL}/${WEIGHT_KEY}.json`; }
   function emptyState() { return DAYS.map(() => [false, false, false]); }
   function timeNow() { return new Date().toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }); }
   function weekTotal(s) { return s.reduce((sum, d) => sum + d.filter(Boolean).length, 0); }
@@ -254,6 +434,17 @@
     el.className = 'sync-status ' + (cls || '');
   }
 
+  // ── TAB SWITCHING ──────────────────────────────────────────────
+  function showTab(tab) {
+    currentTab = tab;
+    document.getElementById('tabWeek').classList.toggle('active', tab === 'week');
+    document.getElementById('tabWeight').classList.toggle('active', tab === 'weight');
+    document.getElementById('weekSection').classList.toggle('hidden-section', tab !== 'week');
+    document.getElementById('weightSection').classList.toggle('hidden-section', tab !== 'weight');
+    if (tab === 'weight') renderWeight();
+  }
+
+  // ── WEEK FUNCTIONS ────────────────────────────────────────────
   async function loadWeek(w) {
     const res = await fetch(dbUrl(w));
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -274,7 +465,7 @@
     const sel = document.getElementById('weekSelector');
     sel.innerHTML = '';
     for (let w = 1; w <= NUM_WEEKS; w++) {
-      const btn   = document.createElement('button');
+      const btn = document.createElement('button');
       btn.className = 'week-btn' + (w === currentWeek ? ' active' : '');
       const total = weekTotal(allWeeks[w] || emptyState());
       btn.innerHTML = `Vecka ${w}<span class="week-mini-score ${scoreClass(total)}">${total}/21</span>`;
@@ -293,10 +484,10 @@
       const checked = state[di].filter(Boolean).length;
       total += checked;
 
-      const card    = document.createElement('div');
+      const card = document.createElement('div');
       card.className = 'day-card';
 
-      const nameEl  = document.createElement('div');
+      const nameEl = document.createElement('div');
       nameEl.className = 'day-name';
       nameEl.textContent = day.slice(0, 3);
       card.appendChild(nameEl);
@@ -307,17 +498,14 @@
       LABELS.forEach((label, ci) => {
         const item = document.createElement('div');
         item.className = 'check-item';
-
         const btn = document.createElement('button');
         btn.className = 'check-btn' + (state[di][ci] ? ' checked' : '');
         btn.innerHTML = state[di][ci] ? '✓' : '';
         btn.title = label;
         btn.addEventListener('click', () => toggle(di, ci));
-
         const lbl = document.createElement('div');
         lbl.className = 'check-label';
         lbl.textContent = label;
-
         item.appendChild(btn);
         item.appendChild(lbl);
         checksEl.appendChild(item);
@@ -338,7 +526,7 @@
     wtEl.className = 'weekly-total ' + scoreClass(total);
   }
 
-  function render() { renderWeekSelector(); renderGrid(); }
+  function renderWeek() { renderWeekSelector(); renderGrid(); }
 
   async function switchWeek(w) {
     currentWeek = w;
@@ -348,7 +536,7 @@
       catch(e) { allWeeks[w] = emptyState(); }
     }
     setStatus('✓ Vecka ' + w, 'ok');
-    render();
+    renderWeek();
   }
 
   async function toggle(di, ci) {
@@ -356,7 +544,7 @@
     saving = true;
     if (!allWeeks[currentWeek]) allWeeks[currentWeek] = emptyState();
     allWeeks[currentWeek][di][ci] = !allWeeks[currentWeek][di][ci];
-    render();
+    renderWeek();
     setStatus('Sparar…', 'syncing');
     try {
       const ok = await saveWeek(currentWeek, allWeeks[currentWeek]);
@@ -367,7 +555,7 @@
 
   async function resetAll() {
     allWeeks[currentWeek] = emptyState();
-    render();
+    renderWeek();
     setStatus('Sparar…', 'syncing');
     try {
       const ok = await saveWeek(currentWeek, allWeeks[currentWeek]);
@@ -375,14 +563,191 @@
     } catch(e) { setStatus('⚠ Fel: ' + e.message, 'err'); }
   }
 
+  // ── WEIGHT FUNCTIONS ───────────────────────────────────────────
+  async function loadWeightEntries() {
+    const res = await fetch(weightUrl());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (!data) return [];
+    // Firebase stores as object when keys are strings
+    if (Array.isArray(data)) return data.filter(Boolean);
+    return Object.values(data);
+  }
+
+  async function saveWeightEntries(entries) {
+    const res = await fetch(weightUrl(), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entries)
+    });
+    return res.ok;
+  }
+
+  async function addWeight() {
+    const input = document.getElementById('weightInput');
+    const kg = parseFloat(input.value);
+    if (isNaN(kg) || kg <= 0 || kg > 500) {
+      setStatus('⚠ Ange en giltig vikt', 'err');
+      return;
+    }
+    saving = true;
+    weightEntries.push({ ts: Date.now(), kg: kg });
+    weightEntries.sort((a, b) => a.ts - b.ts);
+    input.value = '';
+    renderWeight();
+    setStatus('Sparar vikt…', 'syncing');
+    try {
+      const ok = await saveWeightEntries(weightEntries);
+      setStatus(ok ? '✓ Vikt sparad ' + timeNow() : '⚠ Kunde inte spara', ok ? 'ok' : 'err');
+    } catch(e) { setStatus('⚠ Fel: ' + e.message, 'err'); }
+    saving = false;
+  }
+
+  async function deleteWeightEntry(idx) {
+    saving = true;
+    weightEntries.splice(idx, 1);
+    renderWeight();
+    setStatus('Tar bort…', 'syncing');
+    try {
+      const ok = await saveWeightEntries(weightEntries);
+      setStatus(ok ? '✓ Borttagen ' + timeNow() : '⚠ Kunde inte spara', ok ? 'ok' : 'err');
+    } catch(e) { setStatus('⚠ Fel: ' + e.message, 'err'); }
+    saving = false;
+  }
+
+  function formatDate(ts) {
+    const d = new Date(ts);
+    return d.toLocaleDateString('sv-SE', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  function formatDateShort(ts) {
+    const d = new Date(ts);
+    return d.toLocaleDateString('sv-SE', { day: '2-digit', month: 'short' });
+  }
+
+  function renderChart() {
+    const container = document.getElementById('chartContainer');
+    container.innerHTML = '';
+
+    if (weightEntries.length === 0) {
+      container.innerHTML = '<div class="chart-empty">Lägg till din första vikt för att se grafen 📊</div>';
+      return;
+    }
+
+    const W = 480, H = 240;
+    const padL = 44, padR = 16, padT = 20, padB = 36;
+    const chartW = W - padL - padR;
+    const chartH = H - padT - padB;
+
+    const sorted = [...weightEntries].sort((a, b) => a.ts - b.ts);
+    const minTs = sorted[0].ts;
+    const maxTs = sorted[sorted.length - 1].ts;
+    const tsRange = maxTs - minTs || 1;
+
+    const kgs = sorted.map(e => e.kg);
+    let minKg = Math.min(...kgs);
+    let maxKg = Math.max(...kgs);
+    const kgPad = Math.max((maxKg - minKg) * 0.2, 1);
+    minKg = Math.floor(minKg - kgPad);
+    maxKg = Math.ceil(maxKg + kgPad);
+    const kgRange = maxKg - minKg || 1;
+
+    const xFor = ts => padL + (sorted.length === 1 ? chartW/2 : ((ts - minTs) / tsRange) * chartW);
+    const yFor = kg => padT + chartH - ((kg - minKg) / kgRange) * chartH;
+
+    let svg = `<svg class="chart-svg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+
+    // Y axis grid + labels
+    const ySteps = 4;
+    for (let i = 0; i <= ySteps; i++) {
+      const kg = minKg + (kgRange * i / ySteps);
+      const y = yFor(kg);
+      svg += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>`;
+      svg += `<text x="${padL - 8}" y="${y + 4}" fill="rgba(255,255,255,0.5)" font-size="10" text-anchor="end">${kg.toFixed(1)}</text>`;
+    }
+
+    // X axis labels
+    const xLabelCount = Math.min(sorted.length, 5);
+    for (let i = 0; i < xLabelCount; i++) {
+      const idx = Math.floor((sorted.length - 1) * i / Math.max(xLabelCount - 1, 1));
+      const e = sorted[idx];
+      const x = xFor(e.ts);
+      svg += `<text x="${x}" y="${H - padB + 18}" fill="rgba(255,255,255,0.5)" font-size="10" text-anchor="middle">${formatDateShort(e.ts)}</text>`;
+    }
+
+    // Line path
+    if (sorted.length > 1) {
+      let path = '';
+      sorted.forEach((e, i) => {
+        const x = xFor(e.ts), y = yFor(e.kg);
+        path += (i === 0 ? 'M' : 'L') + x + ',' + y + ' ';
+      });
+
+      // Area under line
+      let areaPath = path + `L${xFor(sorted[sorted.length - 1].ts)},${padT + chartH} L${xFor(sorted[0].ts)},${padT + chartH} Z`;
+      svg += `<defs><linearGradient id="grad1" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#f0932b" stop-opacity="0.4"/>
+        <stop offset="100%" stop-color="#f0932b" stop-opacity="0"/>
+      </linearGradient></defs>`;
+      svg += `<path d="${areaPath}" fill="url(#grad1)"/>`;
+      svg += `<path d="${path}" fill="none" stroke="#f0932b" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+    }
+
+    // Points
+    sorted.forEach(e => {
+      const x = xFor(e.ts), y = yFor(e.kg);
+      svg += `<circle cx="${x}" cy="${y}" r="4" fill="#fff" stroke="#f0932b" stroke-width="2"/>`;
+    });
+
+    svg += '</svg>';
+    container.innerHTML = svg;
+  }
+
+  function renderEntriesList() {
+    const list = document.getElementById('entriesList');
+    list.innerHTML = '';
+    if (weightEntries.length === 0) {
+      list.style.display = 'none';
+      return;
+    }
+    list.style.display = 'block';
+    const sorted = [...weightEntries].sort((a, b) => b.ts - a.ts);
+    sorted.forEach((e) => {
+      const realIdx = weightEntries.findIndex(x => x.ts === e.ts && x.kg === e.kg);
+      const row = document.createElement('div');
+      row.className = 'entry-row';
+      row.innerHTML = `
+        <span class="entry-date">${formatDate(e.ts)}</span>
+        <span>
+          <span class="entry-weight">${e.kg.toFixed(1)} kg</span>
+          <button class="entry-delete" onclick="deleteWeightEntry(${realIdx})" title="Ta bort">✕</button>
+        </span>
+      `;
+      list.appendChild(row);
+    });
+  }
+
+  function renderWeight() {
+    renderChart();
+    renderEntriesList();
+  }
+
+  // ── POLLING ────────────────────────────────────────────────────
   async function poll() {
     if (saving) return;
     try {
-      const remote = await loadWeek(currentWeek);
-      if (remote && JSON.stringify(remote) !== JSON.stringify(allWeeks[currentWeek])) {
-        allWeeks[currentWeek] = remote;
-        render();
+      // Always poll current week
+      const remoteWeek = await loadWeek(currentWeek);
+      if (remoteWeek && JSON.stringify(remoteWeek) !== JSON.stringify(allWeeks[currentWeek])) {
+        allWeeks[currentWeek] = remoteWeek;
+        if (currentTab === 'week') renderWeek();
         setStatus('↻ Uppdaterad ' + timeNow(), 'ok');
+      }
+      // Poll weights
+      const remoteWeights = await loadWeightEntries();
+      if (JSON.stringify(remoteWeights) !== JSON.stringify(weightEntries)) {
+        weightEntries = remoteWeights;
+        if (currentTab === 'weight') renderWeight();
       }
     } catch(e) {}
   }
@@ -392,30 +757,29 @@
     for (let w = 1; w <= NUM_WEEKS; w++) {
       promises.push(loadWeek(w).then(d => { allWeeks[w] = d || emptyState(); }).catch(() => { allWeeks[w] = emptyState(); }));
     }
+    promises.push(loadWeightEntries().then(d => { weightEntries = d; }).catch(() => { weightEntries = []; }));
     await Promise.all(promises);
     setStatus('✓ Ansluten', 'ok');
-    render();
+    renderWeek();
     document.getElementById('loadingOverlay').classList.add('hidden');
     setInterval(poll, 10000);
   }
 
-  // PWA install prompt
+  // PWA install
   let deferredPrompt = null;
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
     document.getElementById('installBanner').classList.add('visible');
   });
-
   document.getElementById('installBanner').addEventListener('click', async () => {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
+    await deferredPrompt.userChoice;
     deferredPrompt = null;
     document.getElementById('installBanner').classList.remove('visible');
   });
 
-  // Register service worker for offline support
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
